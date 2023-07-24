@@ -1,6 +1,8 @@
 package com.unisalento.hospitalmaps;
 
 import android.os.Bundle;
+import android.widget.AutoCompleteTextView;
+import android.widget.SearchView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -11,13 +13,21 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class ListaDestinazioniActivity extends AppCompatActivity {
+import java.util.ArrayList;
+import java.util.List;
 
+public class ListaDestinazioniActivity extends AppCompatActivity {
+    private AutoCompleteTextView cercaReparto;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_destinazioni);
+        cercaReparto = findViewById(R.id.cercaReparto);
 
+        List<String> opzioni = new ArrayList<>(); // Popola questa lista con le opzioni ottenute dall'API
+        DropDownAdapterActivity adapter = new DropDownAdapterActivity(this, opzioni);
+
+        cercaReparto.setAdapter(adapter);
         // Recupera i dati
         String responseData = getIntent().getStringExtra("risposta_destinazioni");
 

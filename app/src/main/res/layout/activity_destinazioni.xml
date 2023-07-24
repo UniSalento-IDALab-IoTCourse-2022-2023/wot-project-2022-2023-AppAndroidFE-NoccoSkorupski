@@ -5,13 +5,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <SearchView
+    <AutoCompleteTextView
         android:id="@+id/cercaReparto"
         android:layout_width="378dp"
         android:layout_height="62dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.484"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         tools:layout_editor_absoluteY="16dp" />
 
     <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
