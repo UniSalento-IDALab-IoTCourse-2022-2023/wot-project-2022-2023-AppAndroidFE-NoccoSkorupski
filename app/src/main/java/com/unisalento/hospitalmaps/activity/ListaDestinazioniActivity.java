@@ -1,13 +1,15 @@
-package com.unisalento.hospitalmaps;
+package com.unisalento.hospitalmaps.activity;
 
 import android.os.Bundle;
 import android.widget.AutoCompleteTextView;
-import android.widget.SearchView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.unisalento.hospitalmaps.DropDownAdapter;
+import com.unisalento.hospitalmaps.R;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -25,7 +27,7 @@ public class ListaDestinazioniActivity extends AppCompatActivity {
         cercaReparto = findViewById(R.id.cercaReparto);
 
         List<String> opzioni = new ArrayList<>(); // Popola questa lista con le opzioni ottenute dall'API
-        DropDownAdapterActivity adapter = new DropDownAdapterActivity(this, opzioni);
+        DropDownAdapter adapter = new DropDownAdapter(this, opzioni);
 
         cercaReparto.setAdapter(adapter);
         // Recupera i dati

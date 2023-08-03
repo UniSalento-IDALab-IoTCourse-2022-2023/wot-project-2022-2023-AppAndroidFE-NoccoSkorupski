@@ -1,4 +1,4 @@
-package com.unisalento.hospitalmaps;
+package com.unisalento.hospitalmaps.activity;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -11,6 +11,8 @@ import android.widget.Button;
 
 import android.widget.Switch;
 import android.widget.Toast;
+
+import com.unisalento.hospitalmaps.R;
 
 import java.io.IOException;
 
@@ -28,10 +30,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         Button inizia = findViewById(R.id.inizia);
-        inizia .setOnClickListener(new View.OnClickListener() {
+        inizia.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                getListaDestinazioni();
+                openPercorsoActivity(view);
 
                 SharedPreferences sharedPreferences = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
 
@@ -47,6 +49,10 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+    }
+    public void openPercorsoActivity(View view) {
+        Intent intent = new Intent(this, PercorsoActivity.class);
+        startActivity(intent);
     }
 
     private void getListaDestinazioni() {
