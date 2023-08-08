@@ -51,46 +51,11 @@ public class MainActivity extends AppCompatActivity {
         });
     }
     public void openPercorsoActivity(View view) {
-        Intent intent = new Intent(this, PercorsoActivity.class);
+        Intent intent = new Intent(this, ListaRepartiActivity.class);
         startActivity(intent);
     }
 
-    private void getListaDestinazioni() {
-        OkHttpClient client = new OkHttpClient();
-        String url = "http://localhost:8081/api/listaDestinazioni";
 
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-
-        // Esegui la richiesta in modo asincrono
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                // Gestione degli errori in caso di fallimento della richiesta
-                e.printStackTrace();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(MainActivity.this, "Errore nella richiesta", Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                // Gestione della risposta ricevuta dal server
-                final String responseData = response.body().string();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Intent intent = new Intent(MainActivity.this, ListaDestinazioniActivity.class);
-                        intent.putExtra("risposta_destinazioni", responseData);
-                        startActivity(intent);
-                    }
-                });
-            }
-        });
     }
 
 
@@ -98,5 +63,3 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-
-}

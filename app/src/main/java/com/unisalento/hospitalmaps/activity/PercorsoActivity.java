@@ -13,83 +13,73 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.WindowCompat;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.unisalento.hospitalmaps.R;
 
 import java.util.List;
 
-public class PercorsoActivity extends Activity implements SensorEventListener {
+public class PercorsoActivity extends AppCompatActivity  implements SensorEventListener{
     private SensorManager sensorManager;
-    private Sensor magnetometerSensor;
-    private Sensor accelerometerSensor;
-    private float[] lastAccelerometer = new float[3];
-    private float[] lastMagnetometer = new float[3];
-    private float[] rotationMatrix = new float[3];
-    private float[] orientation = new float[3];
+    private Sensor magnetometro;
+    private TextView txtAzimuth;
 
-    boolean isLastAccelerometerArrayCopied=false;
-    boolean isLastMagnetometerArrayCopied=false;
-
-    long lastUpdateTime=0;
-    float currentDegree=0f;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_percorso);
+        txtAzimuth = findViewById(R.id.txtAzimuth);
 
-        sensorManager=(SensorManager) getSystemService(SENSOR_SERVICE);
-        accelerometerSensor=sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        magnetometerSensor=sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-    }
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        magnetometro = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        sensorManager.registerListener(this, magnetometerSensor, SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_NORMAL);
-
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        sensorManager.unregisterListener(this, magnetometerSensor);
-        sensorManager.unregisterListener(this, accelerometerSensor);
-    }
-
-    @Override
-    public void onSensorChanged(SensorEvent sensorEvent) {
-
-        if(sensorEvent.sensor == accelerometerSensor) {
-            System.arraycopy(sensorEvent.values, 0, lastAccelerometer,0, sensorEvent.values.length);
-            isLastAccelerometerArrayCopied=true;
-        }else if(sensorEvent.sensor == magnetometerSensor) {
-            System.arraycopy(sensorEvent.values, 0, lastMagnetometer, 0, sensorEvent.values.length);
-            isLastMagnetometerArrayCopied = true;
-        }
-        if(isLastAccelerometerArrayCopied && isLastMagnetometerArrayCopied && System.currentTimeMillis() - lastUpdateTime>250){
-            SensorManager.getRotationMatrix(rotationMatrix, null, lastAccelerometer, lastMagnetometer);
-            SensorManager.getOrientation(rotationMatrix, orientation);
-
-            float azimuthInRadians = orientation[0];
-            float azimuthInDegree = (float) Math.toDegrees(azimuthInRadians);
-            Toast.makeText(this, Float.toString(azimuthInDegree)+"°", Toast.LENGTH_SHORT).show();
-
-            currentDegree=-azimuthInDegree;
-            lastUpdateTime=System.currentTimeMillis();
-
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // Requisisci il permesso
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 225);
+        } else {
+            // Richiedi la posizione corrente
+            sensorManager.registerListener(this, magnetometro, SensorManager.SENSOR_DELAY_NORMAL);
         }
 
+    }
+
+
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        // Ottieni il campo magnetico corrente
+        float x = event.values[0];
+        float y = event.values[1];
+        float z = event.values[2];
+
+        // Calcola l'azimut
+        float azimuth = (float) Math.atan2(y, x);
+
+        // Controlla se l'azimut è negativo
+        if (azimuth < 0) {
+            // Se l'azimut è negativo, aggiungi 2 * Math.PI ad esso
+            azimuth += 2 * Math.PI;
+        }
+
+        // Converti l'azimut in gradi
+        azimuth = (float) (azimuth * 180 / Math.PI);
+
+        txtAzimuth.setText("Azimuth: " + azimuth);
 
     }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // Non viene utilizzato in questo esempio
+
     }
 }
 
