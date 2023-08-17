@@ -48,7 +48,7 @@ public class ListaRepartiActivity extends AppCompatActivity {
             List<String> resultList = new ArrayList<>();
             OkHttpClient client = new OkHttpClient();
                 Request request = new Request.Builder()
-                        .url("http://192.168.1.140:8081/api/utente/reparti/" + CODICE_OSPEDALE)
+                        .url("http://192.168.1.116:8081/api/utente/reparti/" + CODICE_OSPEDALE)
                         .build();
 
                 try {

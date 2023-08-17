@@ -5,16 +5,228 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <ImageView
+        android:id="@+id/destraImage"
+        android:layout_width="280dp"
+        android:layout_height="281dp"
+        android:layout_marginStart="56dp"
+        android:layout_marginTop="230dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/destra"
+        android:visibility="gone"/>
+
     <TextView
-        android:id="@+id/txtAzimuth"
+        android:id="@+id/destraText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:layout_marginStart="44dp"
-        android:layout_marginTop="156dp"
-        android:text="Azimuth: "
+        android:layout_marginTop="8dp"
+        android:text="Svolta a destra"
+        android:textAlignment="center"
+        android:textColor="#3F51B5"
         android:textSize="24sp"
-        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        android:visibility="invisible"/>
+    <ImageView
+        android:id="@+id/sinistraImage"
+        android:layout_width="280dp"
+        android:layout_height="281dp"
+        android:layout_marginStart="56dp"
+        android:layout_marginTop="230dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/sinistra"
+        android:visibility="invisible"/>
+
+    <TextView
+        android:id="@+id/sinistraText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Svolta a sinistra"
+        android:textAlignment="center"
+        android:textColor="#3F51B5"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        android:visibility="invisible"/>
+
+    <ImageView
+        android:id="@+id/drittoImage"
+        android:layout_width="280dp"
+        android:layout_height="281dp"
+        android:layout_marginStart="56dp"
+        android:layout_marginTop="230dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/dritto"
+        android:visibility="invisible"/>
+
+    <TextView
+        android:id="@+id/drittoText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Continua dritto"
+        android:textAlignment="center"
+        android:textColor="#3F51B5"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        android:visibility="invisible"/>
+
+    <ImageView
+        android:id="@+id/drittodestraImage"
+        android:layout_width="280dp"
+        android:layout_height="281dp"
+        android:layout_marginStart="56dp"
+        android:layout_marginTop="230dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/drittodestra"
+        android:visibility="invisible"/>
+
+    <TextView
+        android:id="@+id/drittodestraText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Continua dritto e poi svolta a destra"
+        android:textAlignment="center"
+        android:textColor="#3F51B5"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        android:visibility="invisible"/>
+
+
+    <ImageView
+        android:id="@+id/drittosinistraImage"
+        android:layout_width="280dp"
+        android:layout_height="281dp"
+        android:layout_marginStart="56dp"
+        android:layout_marginTop="230dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/drittosinistra"
+        android:visibility="invisible"/>
+
+    <TextView
+        android:id="@+id/drittosinistraText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Continua dritto e poi svolta a sinsitra"
+        android:textAlignment="center"
+        android:textColor="#3F51B5"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        android:visibility="invisible"/>
+
+    <ImageView
+        android:id="@+id/saliscaleImage"
+        android:layout_width="280dp"
+        android:layout_height="281dp"
+        android:layout_marginStart="56dp"
+        android:layout_marginTop="230dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/saliscale"
+        android:visibility="invisible"/>
+
+    <TextView
+        android:id="@+id/saliscaleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Sali le scale"
+        android:textAlignment="center"
+        android:textColor="#3F51B5"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        android:visibility="invisible"/>
+
+    <ImageView
+        android:id="@+id/scendiscaleImage"
+        android:layout_width="280dp"
+        android:layout_height="281dp"
+        android:layout_marginStart="56dp"
+        android:layout_marginTop="230dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/scendiscale"
+        android:visibility="invisible"/>
+
+    <TextView
+        android:id="@+id/scendiscaleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Scendi le scale"
+        android:textAlignment="center"
+        android:textColor="#3F51B5"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        android:visibility="invisible"/>
+
+    <ImageView
+        android:id="@+id/indietroImage"
+        android:layout_width="280dp"
+        android:layout_height="281dp"
+        android:layout_marginStart="56dp"
+        android:layout_marginTop="230dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/indietro"
+        android:visibility="invisible"/>
+
+    <TextView
+        android:id="@+id/indietroText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Torna indietro"
+        android:textAlignment="center"
+        android:textColor="#3F51B5"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        android:visibility="invisible"/>
+
+    <ImageView
+        android:id="@+id/scaleaccessibiliImage"
+        android:layout_width="280dp"
+        android:layout_height="281dp"
+        android:layout_marginStart="56dp"
+        android:layout_marginTop="230dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/scaleaccessibili"
+        android:visibility="invisible"/>
+
+    <TextView
+        android:id="@+id/scaleaccessibiliText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="540dp"
+        android:text="Prendi le scale"
+        android:textAlignment="center"
+        android:textColor="#3F51B5"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        android:visibility="invisible"/>
 </androidx.constraintlayout.widget.ConstraintLayout>
