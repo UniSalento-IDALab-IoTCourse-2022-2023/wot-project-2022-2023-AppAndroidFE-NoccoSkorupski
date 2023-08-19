@@ -61,7 +61,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class PercorsoActivity extends AppCompatActivity  implements SensorEventListener, BeaconConsumer {
+public class PercorsoActivity extends AppCompatActivity  implements SensorEventListener, BeaconConsumer{
 
     private SensorManager sensorManager;
     private Sensor magnetometro;
@@ -184,7 +184,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                 e.printStackTrace();
             }
             new PercorsoActivity.FetchDataTask().execute(jsonObject.toString());
-            indicazioni(1, mappaItems);
+            indicazioni(1, mappaItems1);
             controlli();
         }
         else{
@@ -197,7 +197,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                 e.printStackTrace();
             }
             new PercorsoActivity.FetchDataTask1().execute(jsonObject1.toString());
-            indicazioni1(1,mappaItems1);
+            indicazioni1(1, mappaItems1);
             controlli1();
         }
 
@@ -316,7 +316,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
     private class FetchDataTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... params) {
-            String url = "http://192.168.1.116:8081/api/utente/ottieniPercorso/"+CODICE_OSPEDALE;
+            String url = "http://192.168.1.140:8081/api/utente/ottieniPercorso/"+CODICE_OSPEDALE;
             OkHttpClient client = new OkHttpClient();
             MediaType JSON = MediaType.parse("application/json; charset=utf-8");
             RequestBody requestBody = RequestBody.create(JSON, params[0]);
@@ -376,10 +376,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
 
     }
 
-    private class FetchDataTask1 extends AsyncTask<String, Void, String> {
+    private class FetchDataTask1 extends AsyncTask<String, Void, String>  {
         @Override
         protected String doInBackground(String... params) {
-            String url = "http://192.168.1.116:8081/api/utente/ottieniPercorsoDisabili/"+CODICE_OSPEDALE;
+            String url = "http://192.168.1.140:8081/api/utente/ottieniPercorsoDisabili/"+CODICE_OSPEDALE;
             OkHttpClient client = new OkHttpClient();
             MediaType JSON = MediaType.parse("application/json; charset=utf-8");
             RequestBody requestBody = RequestBody.create(JSON, params[0]);
