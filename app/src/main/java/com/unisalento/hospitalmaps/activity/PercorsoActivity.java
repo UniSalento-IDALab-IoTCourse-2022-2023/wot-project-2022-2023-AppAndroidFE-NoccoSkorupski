@@ -69,7 +69,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
     private ArrayList<Beacon> beacons = new ArrayList<>();
     Collection<Beacon> beaconsInRange;
     private String nuovoNearestBeaconUuid;
-    private boolean isScanningPaused = false;
+    private boolean isScanning = false;
     private String nearestBeaconUuid;
     private boolean presente = false;
     private Integer posizioneRicomincia;
@@ -243,7 +243,8 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
         beaconManager.setRangeNotifier(new RangeNotifier() {
             @Override
             public void didRangeBeaconsInRegion(Collection<Beacon> beaconsInRange, Region region) {
-                if (!isScanningPaused) {
+                if (!isScanning) {
+                    isScanning = true;
                     if (!beaconsInRange.isEmpty()) {
                         beacons.clear(); // Rimuovi i beacon precedenti dalla lista
                         beacons.addAll(beaconsInRange); // Aggiungi i nuovi beacon rilevati alla lista
@@ -253,27 +254,18 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                             Beacon nearestBeacon = beacons.get(0); // Ottieni il primo elemento della lista
                             nuovoNearestBeaconUuid = nearestBeacon.getId1().toString();
                             // Ora hai l'UUID del beacon più vicino
-                            runOnUiThread(() -> {
-                                Toast.makeText(PercorsoActivity.this, "Nuovo beacon più vicino UUID: " + nuovoNearestBeaconUuid, Toast.LENGTH_LONG).show();
-                                Log.i("BeaconData", "UUID del beacon: " + nuovoNearestBeaconUuid);
-                            });
+                            Toast.makeText(PercorsoActivity.this, "Nuovo beacon più vicino UUID: " + nuovoNearestBeaconUuid, Toast.LENGTH_LONG).show();
                         } else {
                             Log.i("Beacon Data", "Nessun beacon trovato.");
                             nuovoNearestBeaconUuid = null;
                         }
-                        isScanningPaused = true;
-                        new android.os.Handler().postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                isScanningPaused = false;
-                            }
-                        }, 10000);
+                        isScanning = false;
                     }
                 }
             }
         });
-        beaconManager.setForegroundBetweenScanPeriod(5000); // Rallenta la scansione ogni 5 secondi
-        beaconManager.setForegroundScanPeriod(5000);
+        beaconManager.setForegroundBetweenScanPeriod(500); // Rallenta la scansione ogni 5 secondi
+        beaconManager.setForegroundScanPeriod(500);
 
         try {
             // Avvia la scansione dei beacon
@@ -428,11 +420,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
         runnable = new Runnable() {
             @Override
             public void run() {
-                // Esegui l'azione desiderata ogni secondo
-                if (!isScanningPaused) {
-                    // Avvia la scansione dei beacon solo se non è in pausa
-                    startBeaconScanning();
-                    if(!nuovoNearestBeaconUuid.equals(nearestBeaconUuid)) {
+                    if(nuovoNearestBeaconUuid != null && !nuovoNearestBeaconUuid.equals(nearestBeaconUuid)) {
                         nearestBeaconUuid = nuovoNearestBeaconUuid;
                         presente = false;
                         for (Mappa mappa : mappaItems) {
@@ -441,7 +429,6 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                                 indicazioni(nearestBeaconUuid, mappaItems);
                                 break;
                             }
-                        }
                         if (!presente) {
                             JSONObject jsonObject = new JSONObject();
                             try {
@@ -461,8 +448,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
 
         // Avvia il Runnable per la prima volta
         handler.postDelayed(runnable, 5000);
-
-    }
+}
 
     public void controlli1(){
         handler = new Handler(Looper.getMainLooper());
@@ -470,7 +456,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             @Override
             public void run() {
                 // Esegui l'azione desiderata ogni secondo
-                if (!isScanningPaused) {
+                if (!isScanning) {
                     // Avvia la scansione dei beacon solo se non è in pausa
                     startBeaconScanning();
                     if(!nuovoNearestBeaconUuid.equals(nearestBeaconUuid)){
