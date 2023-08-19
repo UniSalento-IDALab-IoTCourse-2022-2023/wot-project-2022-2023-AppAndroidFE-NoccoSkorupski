@@ -1,19 +1,14 @@
 package com.unisalento.hospitalmaps.activity;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -21,22 +16,15 @@ import android.os.Looper;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.TableLayout;
-import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.WindowCompat;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.unisalento.hospitalmaps.R;
 import com.unisalento.hospitalmaps.model.Mappa;
 
@@ -184,7 +172,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                 e.printStackTrace();
             }
             new PercorsoActivity.FetchDataTask().execute(jsonObject.toString());
-            indicazioni(1, mappaItems1);
+            indicazioni(nearestBeaconUuid, mappaItems1);
             controlli();
         }
         else{
@@ -362,8 +350,6 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         // Aggiungere l'oggetto MappaItem alla lista
                         mappaItems.add(item);
                     }
-
-                    indicazioni(1, mappaItems);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -446,26 +432,26 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                 if (!isScanningPaused) {
                     // Avvia la scansione dei beacon solo se non è in pausa
                     startBeaconScanning();
-                    if(!nuovoNearestBeaconUuid.equals(nearestBeaconUuid)){
-                        for(Mappa mappa : mappaItems){
-                            if(mappa.getBeaconUUID().equals(nuovoNearestBeaconUuid)){
-                                presente=true;
-                                posizioneRicomincia=mappa.getPosizione() - 1;
-                                indicazioni(posizioneRicomincia, mappaItems);
-                                return;
+                    if(!nuovoNearestBeaconUuid.equals(nearestBeaconUuid)) {
+                        nearestBeaconUuid = nuovoNearestBeaconUuid;
+                        presente = false;
+                        for (Mappa mappa : mappaItems) {
+                            if (mappa.getBeaconUUID().equals(nearestBeaconUuid)) {
+                                presente = true;
+                                indicazioni(nearestBeaconUuid, mappaItems);
+                                break;
                             }
-                            else{
-                                JSONObject jsonObject = new JSONObject();
-                                try {
-                                    jsonObject.put("uuidPartenza", nuovoNearestBeaconUuid);
-                                    jsonObject.put("repartoArrivo", reparto);
-                                    jsonObject.put("stanzaArrivo", stanza);
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
-                                new PercorsoActivity.FetchDataTask().execute(jsonObject.toString());
+                        }
+                        if (!presente) {
+                            JSONObject jsonObject = new JSONObject();
+                            try {
+                                jsonObject.put("uuidPartenza", nuovoNearestBeaconUuid);
+                                jsonObject.put("repartoArrivo", reparto);
+                                jsonObject.put("stanzaArrivo", stanza);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
                             }
-
+                            new PercorsoActivity.FetchDataTask().execute(jsonObject.toString());
                         }
                     }
                 }
@@ -527,430 +513,433 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
     }
 
 
-    private void indicazioni(int posizione, List<Mappa> mappaArray){
+    private void indicazioni(String beaconUuid, List<Mappa> mappaArray){
         String direzione="";
-        for (int i=posizione; i < mappaArray.size(); i++ ){
-            float gradi = azimuth - gradiPartenza;
-            if(gradi < 0)
-                gradi = 360 - gradi;
-            if((gradi >= 0 && gradi < 45) || (gradi >= 315 && gradi <= 360))
-                direzione = "nord";
-            else if(gradi >= 45 && gradi < 135)
-                direzione = "est";
-            else if (gradi >= 135 && gradi < 225)
-                direzione="sud";
-            else
-                direzione="ovest";
+        for(int i=0; i < mappaArray.size(); i++) {
 
-            if(direzione.equals("nord")){
-                if(mappaArray.get(i).getNord().equals("DESTRA")){
-                    destra = true;
-                    sinistra = false;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    updateViewsVisibility();
-                } else if(mappaArray.get(i).getNord().equals("SINISTRA")){
-                    sinistra = true;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("DRITTO")){
-                    dritto = true;
-                    sinistra = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("DIETRO")){
-                    indietro = true;
-                    dritto = false;
-                    sinistra = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("DRITTO_DESTRA")){
-                    drittodestra = true;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("DRITTO_SINISTRA")){
-                    drittosinistra = true;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("SALI_SCALE")){
-                    saliscale = true;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("SCENDI_SCALE")){
-                    scendiscale = true;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("SCALE_DISABILI")){
-                    scaleaccessiili = true;
-                    scendiscale = false;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }
-            }
-            if(direzione.equals("sud")){
-                if(mappaArray.get(i).getSud().equals("DESTRA")){
-                    destra = true;
-                    sinistra = false;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    updateViewsVisibility();
-                } else if(mappaArray.get(i).getSud().equals("SINISTRA")){
-                    sinistra = true;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("DRITTO")){
-                    dritto = true;
-                    sinistra = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("DIETRO")){
-                    indietro = true;
-                    dritto = false;
-                    sinistra = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("DRITTO_DESTRA")){
-                    drittodestra = true;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("DRITTO_SINISTRA")){
-                    drittosinistra = true;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("SALI_SCALE")){
-                    saliscale = true;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("SCENDI_SCALE")){
-                    scendiscale = true;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("SCALE_DISABILI")){
-                    scaleaccessiili = true;
-                    scendiscale = false;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }
-            }
-            if(direzione.equals("est")){
-                if(mappaArray.get(i).getEst().equals("DESTRA")){
-                    destra = true;
-                    sinistra = false;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    updateViewsVisibility();
-                } else if(mappaArray.get(i).getEst().equals("SINISTRA")){
-                    sinistra = true;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("DRITTO")){
-                    dritto = true;
-                    sinistra = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("DIETRO")){
-                    indietro = true;
-                    dritto = false;
-                    sinistra = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("DRITTO_DESTRA")){
-                    drittodestra = true;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("DRITTO_SINISTRA")){
-                    drittosinistra = true;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("SALI_SCALE")){
-                    saliscale = true;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("SCENDI_SCALE")){
-                    scendiscale = true;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("SCALE_DISABILI")){
-                    scaleaccessiili = true;
-                    scendiscale = false;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }
-            }
-            if(direzione.equals("ovest")){
-                if(mappaArray.get(i).getOvest().equals("DESTRA")){
-                    destra = true;
-                    sinistra = false;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    updateViewsVisibility();
-                } else if(mappaArray.get(i).getOvest().equals("SINISTRA")){
-                    sinistra = true;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("DRITTO")){
-                    dritto = true;
-                    sinistra = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("DIETRO")){
-                    indietro = true;
-                    dritto = false;
-                    sinistra = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("DRITTO_DESTRA")){
-                    drittodestra = true;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("DRITTO_SINISTRA")){
-                    drittosinistra = true;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("SALI_SCALE")){
-                    saliscale = true;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("SCENDI_SCALE")){
-                    scendiscale = true;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("SCALE_DISABILI")){
-                    scaleaccessiili = true;
-                    scendiscale = false;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }
-            }
+            if(mappaArray.get(i).getBeaconUUID().equals(beaconUuid)) {
+                float gradi = azimuth - gradiPartenza;
+                if (gradi < 0)
+                    gradi = 360 - gradi;
+                if ((gradi >= 0 && gradi < 45) || (gradi >= 315 && gradi <= 360))
+                    direzione = "nord";
+                else if (gradi >= 45 && gradi < 135)
+                    direzione = "est";
+                else if (gradi >= 135 && gradi < 225)
+                    direzione = "sud";
+                else
+                    direzione = "ovest";
 
+                if (direzione.equals("nord")) {
+                    if (mappaArray.get(i).getNord().equals("DESTRA")) {
+                        destra = true;
+                        sinistra = false;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("SINISTRA")) {
+                        sinistra = true;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("DRITTO")) {
+                        dritto = true;
+                        sinistra = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("DIETRO")) {
+                        indietro = true;
+                        dritto = false;
+                        sinistra = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("DRITTO_DESTRA")) {
+                        drittodestra = true;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("DRITTO_SINISTRA")) {
+                        drittosinistra = true;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("SALI_SCALE")) {
+                        saliscale = true;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("SCENDI_SCALE")) {
+                        scendiscale = true;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("SCALE_DISABILI")) {
+                        scaleaccessiili = true;
+                        scendiscale = false;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    }
+                }
+                if (direzione.equals("sud")) {
+                    if (mappaArray.get(i).getSud().equals("DESTRA")) {
+                        destra = true;
+                        sinistra = false;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("SINISTRA")) {
+                        sinistra = true;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("DRITTO")) {
+                        dritto = true;
+                        sinistra = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("DIETRO")) {
+                        indietro = true;
+                        dritto = false;
+                        sinistra = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("DRITTO_DESTRA")) {
+                        drittodestra = true;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("DRITTO_SINISTRA")) {
+                        drittosinistra = true;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("SALI_SCALE")) {
+                        saliscale = true;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("SCENDI_SCALE")) {
+                        scendiscale = true;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("SCALE_DISABILI")) {
+                        scaleaccessiili = true;
+                        scendiscale = false;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    }
+                }
+                if (direzione.equals("est")) {
+                    if (mappaArray.get(i).getEst().equals("DESTRA")) {
+                        destra = true;
+                        sinistra = false;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("SINISTRA")) {
+                        sinistra = true;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("DRITTO")) {
+                        dritto = true;
+                        sinistra = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("DIETRO")) {
+                        indietro = true;
+                        dritto = false;
+                        sinistra = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("DRITTO_DESTRA")) {
+                        drittodestra = true;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("DRITTO_SINISTRA")) {
+                        drittosinistra = true;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("SALI_SCALE")) {
+                        saliscale = true;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("SCENDI_SCALE")) {
+                        scendiscale = true;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("SCALE_DISABILI")) {
+                        scaleaccessiili = true;
+                        scendiscale = false;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    }
+                }
+                if (direzione.equals("ovest")) {
+                    if (mappaArray.get(i).getOvest().equals("DESTRA")) {
+                        destra = true;
+                        sinistra = false;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("SINISTRA")) {
+                        sinistra = true;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("DRITTO")) {
+                        dritto = true;
+                        sinistra = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("DIETRO")) {
+                        indietro = true;
+                        dritto = false;
+                        sinistra = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("DRITTO_DESTRA")) {
+                        drittodestra = true;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("DRITTO_SINISTRA")) {
+                        drittosinistra = true;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("SALI_SCALE")) {
+                        saliscale = true;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scendiscale = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("SCENDI_SCALE")) {
+                        scendiscale = true;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scaleaccessiili = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("SCALE_DISABILI")) {
+                        scaleaccessiili = true;
+                        scendiscale = false;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        destra = false;
+                        updateViewsVisibility();
+                    }
+                }
+                break;
+            }
         }
 
     }
