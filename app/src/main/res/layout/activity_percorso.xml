@@ -6,7 +6,7 @@
     android:layout_height="match_parent">
 
     <ImageView
-        android:id="@+id/destraImage"
+        android:id="@+id/destraImage1"
         android:layout_width="280dp"
         android:layout_height="281dp"
         android:layout_marginStart="56dp"
@@ -17,7 +17,7 @@
         android:visibility="gone"/>
 
     <TextView
-        android:id="@+id/destraText"
+        android:id="@+id/destraText1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
@@ -27,7 +27,7 @@
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        app:layout_constraintTop_toBottomOf="@id/destraImage1"
         android:visibility="invisible"/>
     <ImageView
         android:id="@+id/sinistraImage"
@@ -51,7 +51,7 @@
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        app:layout_constraintTop_toBottomOf="@id/destraImage1"
         android:visibility="invisible"/>
 
     <ImageView
@@ -76,7 +76,7 @@
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        app:layout_constraintTop_toBottomOf="@id/destraImage1"
         android:visibility="invisible"/>
 
     <ImageView
@@ -101,7 +101,7 @@
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        app:layout_constraintTop_toBottomOf="@id/destraImage1"
         android:visibility="invisible"/>
 
 
@@ -121,13 +121,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="Continua dritto e poi svolta a sinsitra"
+        android:text="Continua dritto e poi svolta a sinistra"
         android:textAlignment="center"
         android:textColor="#3F51B5"
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        app:layout_constraintTop_toBottomOf="@id/destraImage1"
         android:visibility="invisible"/>
 
     <ImageView
@@ -152,7 +152,7 @@
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        app:layout_constraintTop_toBottomOf="@id/destraImage1"
         android:visibility="invisible"/>
 
     <ImageView
@@ -177,7 +177,7 @@
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        app:layout_constraintTop_toBottomOf="@id/destraImage1"
         android:visibility="invisible"/>
 
     <ImageView
@@ -202,7 +202,7 @@
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        app:layout_constraintTop_toBottomOf="@id/destraImage1"
         android:visibility="invisible"/>
 
     <ImageView
@@ -227,6 +227,56 @@
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/destraImage"
+        app:layout_constraintTop_toBottomOf="@id/destraImage1"
         android:visibility="invisible"/>
+
+    <ImageView
+        android:id="@+id/progressImage"
+        android:layout_width="187dp"
+        android:layout_height="301dp"
+        android:layout_marginTop="160dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.496"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/progress"
+        android:visibility="invisible"/>
+
+    <TextView
+        android:id="@+id/progressText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Genero percorso..."
+        android:textColor="#3F51B5"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/progressImage"
+        android:visibility="invisible"/>
+
+    <ImageView
+        android:id="@+id/arrivatoImage"
+        android:layout_width="187dp"
+        android:layout_height="301dp"
+        android:layout_marginTop="136dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.495"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@mipmap/arrivato"
+        android:visibility="invisible"/>
+
+    <TextView
+        android:id="@+id/arrivatoText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sei arrivato a destinazione! La stanza si trova lungo il corridoio"
+        android:textAlignment="center"
+        android:textColor="#3F51B5"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/progressImage"
+        android:visibility="invisible"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

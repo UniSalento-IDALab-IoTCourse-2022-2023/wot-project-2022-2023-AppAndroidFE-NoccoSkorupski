@@ -49,7 +49,7 @@ public class ListaStanzeActivity extends AppCompatActivity {
             List<String> resultList = new ArrayList<>();
             OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder()
-                    .url("http://192.168.1.140:8081/api/utente/stanze/" + CODICE_OSPEDALE+"/"+reparto)
+                    .url("http://ec2-52-22-228-41.compute-1.amazonaws.com:8081/api/utente/stanze/" + CODICE_OSPEDALE+"/"+reparto)
                     .build();
 
             try {

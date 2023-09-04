@@ -72,8 +72,9 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
     private boolean isScanning = false;
     private String nearestBeaconUuid;
     private boolean presente = false;
-    private Integer posizioneRicomincia;
-    private boolean presente1 = false;
+    private boolean presente1=false;
+
+
     private Integer posizioneRicomincia1;
     private boolean none = false;
 
@@ -97,6 +98,12 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
     private TextView scendisaleText;
     private ImageView scaleaccessibiliImage;
     private TextView scaleaccessibiliText;
+    private ImageView progressImage;
+    private TextView progressText;
+    private ImageView arrivatoImage;
+    private TextView arrivatoText;
+    private JSONArray mappaArray;
+    private final Object mappaItemsLock = new Object();
 
     private boolean destra=false;
     private boolean sinistra=false;
@@ -106,15 +113,18 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
     private boolean indietro=false;
     private boolean saliscale=false;
     private boolean scendiscale=false;
-    private boolean scaleaccessiili=false;
+    private boolean saliscaleaccessiili=false;
+    private boolean scendiscaleaccessiili=false;
+    private boolean progress=false;
+    private boolean arrivato=false;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_percorso);
-        destraImage = findViewById(R.id.destraImage);
-        destraText = findViewById(R.id.destraText);
+        destraImage = findViewById(R.id.destraImage1);
+        destraText = findViewById(R.id.destraText1);
         sinistraImage = findViewById(R.id.sinistraImage);
         sinistraText = findViewById(R.id.sinistraText);
         drittodestraImage = findViewById(R.id.drittodestraImage);
@@ -131,7 +141,12 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
         scendisaleText = findViewById(R.id.scendiscaleText);
         scaleaccessibiliImage = findViewById(R.id.scaleaccessibiliImage);
         scaleaccessibiliText = findViewById(R.id.scaleaccessibiliText);
-
+        progressImage = findViewById(R.id.progressImage);
+        progressText = findViewById(R.id.progressText);
+        arrivatoImage = findViewById(R.id.arrivatoImage);
+        arrivatoText = findViewById(R.id.arrivatoText);
+        progress = true;
+        updateViewsVisibility();
 
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -172,7 +187,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                 e.printStackTrace();
             }
             new PercorsoActivity.FetchDataTask().execute(jsonObject.toString());
-            indicazioni(nearestBeaconUuid, mappaItems1);
+
+            while(mappaItems.isEmpty() || mappaArray.length() != mappaItems.size()){
+            }
+            indicazioni(nearestBeaconUuid, mappaItems);
             controlli();
         }
         else{
@@ -185,7 +203,9 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                 e.printStackTrace();
             }
             new PercorsoActivity.FetchDataTask1().execute(jsonObject1.toString());
-            indicazioni1(1, mappaItems1);
+            while(mappaItems1.isEmpty() || mappaArray.length() != mappaItems1.size()){
+            }
+            indicazioni1(nearestBeaconUuid, mappaItems1);
             controlli1();
         }
 
@@ -244,7 +264,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             @Override
             public void didRangeBeaconsInRegion(Collection<Beacon> beaconsInRange, Region region) {
                 if (!isScanning) {
-                    isScanning = true;
+                    isScanning = false;
                     if (!beaconsInRange.isEmpty()) {
                         beacons.clear(); // Rimuovi i beacon precedenti dalla lista
                         beacons.addAll(beaconsInRange); // Aggiungi i nuovi beacon rilevati alla lista
@@ -254,7 +274,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                             Beacon nearestBeacon = beacons.get(0); // Ottieni il primo elemento della lista
                             nuovoNearestBeaconUuid = nearestBeacon.getId1().toString();
                             // Ora hai l'UUID del beacon più vicino
-                            Toast.makeText(PercorsoActivity.this, "Nuovo beacon più vicino UUID: " + nuovoNearestBeaconUuid, Toast.LENGTH_LONG).show();
+                            //Toast.makeText(PercorsoActivity.this, "Nuovo beacon più vicino UUID: " + nuovoNearestBeaconUuid, Toast.LENGTH_LONG).show();
                         } else {
                             Log.i("Beacon Data", "Nessun beacon trovato.");
                             nuovoNearestBeaconUuid = null;
@@ -264,8 +284,8 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                 }
             }
         });
-        beaconManager.setForegroundBetweenScanPeriod(500); // Rallenta la scansione ogni 5 secondi
-        beaconManager.setForegroundScanPeriod(500);
+        beaconManager.setForegroundBetweenScanPeriod(1500); // Rallenta la scansione ogni 5 secondi
+        beaconManager.setForegroundScanPeriod(1500);
 
         try {
             // Avvia la scansione dei beacon
@@ -296,7 +316,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
     private class FetchDataTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... params) {
-            String url = "http://192.168.1.140:8081/api/utente/ottieniPercorso/"+CODICE_OSPEDALE;
+            String url = "http://ec2-52-22-228-41.compute-1.amazonaws.com:8081/api/utente/ottieniPercorso/"+CODICE_OSPEDALE;
             OkHttpClient client = new OkHttpClient();
             MediaType JSON = MediaType.parse("application/json; charset=utf-8");
             RequestBody requestBody = RequestBody.create(JSON, params[0]);
@@ -304,12 +324,41 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                     .url(url)
                     .post(requestBody)
                     .build();
+            Response response = null;
 
             try {
-                Response response = client.newCall(request).execute();
+                response = client.newCall(request).execute();
                 if (response.isSuccessful()) {
                     // La richiesta è andata a buon fine
-                    return response.body().string();
+                    String responseString = response.body().string();
+                    if (responseString != null) {
+                        try {
+                            JSONObject jsonResponse = new JSONObject(responseString);
+                            gradiPartenza = jsonResponse.getInt("gradiPartenza");
+                            mappaArray = jsonResponse.getJSONArray("mappa");
+                            for (int i = 0; i < mappaArray.length(); i++) {
+                                JSONObject mappaObject = mappaArray.getJSONObject(i);
+
+                                // Creare un oggetto MappaItem e impostare le proprietà
+                                Mappa item = new Mappa();
+                                item.setBeaconUUID(mappaObject.getString("beaconUUID"));
+                                item.setNord(mappaObject.getString("nord"));
+                                item.setSud(mappaObject.getString("sud"));
+                                item.setEst(mappaObject.getString("est"));
+                                item.setOvest(mappaObject.getString("ovest"));
+                                item.setPosizione(mappaObject.getInt("posizione"));
+
+                                // Aggiungere l'oggetto MappaItem alla lista
+                                mappaItems.add(item);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        // Gestisci il caso in cui la chiamata di rete ha restituito un errore
+                        Log.e("API_ERROR", "Errore nella chiamata API");
+                    }
+                    return responseString;
                 } else {
                     // La richiesta ha restituito un errore
                     return null;
@@ -320,36 +369,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             }
         }
 
-        @Override
-        protected void onPostExecute(String responseString) {
-            if (responseString != null) {
-                try {
-                    JSONObject jsonResponse = new JSONObject(responseString);
-                    gradiPartenza = jsonResponse.getInt("gradiPartenza");
-                    JSONArray mappaArray = jsonResponse.getJSONArray("mappa");
-                    for (int i = 0; i < mappaArray.length(); i++) {
-                        JSONObject mappaObject = mappaArray.getJSONObject(i);
 
-                        // Creare un oggetto MappaItem e impostare le proprietà
-                        Mappa item = new Mappa();
-                        item.setBeaconUUID(mappaObject.getString("beaconUUID"));
-                        item.setNord(mappaObject.getString("nord"));
-                        item.setSud(mappaObject.getString("sud"));
-                        item.setEst(mappaObject.getString("est"));
-                        item.setOvest(mappaObject.getString("ovest"));
-                        item.setPosizione(mappaObject.getInt("posizione"));
-
-                        // Aggiungere l'oggetto MappaItem alla lista
-                        mappaItems.add(item);
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                // Gestisci il caso in cui la chiamata di rete ha restituito un errore
-                Log.e("API_ERROR", "Errore nella chiamata API");
-            }
-        }
 
 
     }
@@ -357,7 +377,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
     private class FetchDataTask1 extends AsyncTask<String, Void, String>  {
         @Override
         protected String doInBackground(String... params) {
-            String url = "http://192.168.1.140:8081/api/utente/ottieniPercorsoDisabili/"+CODICE_OSPEDALE;
+            String url = "http://172.20.10.5:8081/api/utente/ottieniPercorsoDisabili/"+CODICE_OSPEDALE;
             OkHttpClient client = new OkHttpClient();
             MediaType JSON = MediaType.parse("application/json; charset=utf-8");
             RequestBody requestBody = RequestBody.create(JSON, params[0]);
@@ -365,12 +385,41 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                     .url(url)
                     .post(requestBody)
                     .build();
+            Response response = null;
 
             try {
-                Response response = client.newCall(request).execute();
+                response = client.newCall(request).execute();
                 if (response.isSuccessful()) {
                     // La richiesta è andata a buon fine
-                    return response.body().string();
+                    String responseString = response.body().string();
+                    if (responseString != null) {
+                        try {
+                            JSONObject jsonResponse = new JSONObject(responseString);
+                            gradiPartenza = jsonResponse.getInt("gradiPartenza");
+                            mappaArray = jsonResponse.getJSONArray("mappa");
+                            for (int i = 0; i < mappaArray.length(); i++) {
+                                JSONObject mappaObject = mappaArray.getJSONObject(i);
+
+                                // Creare un oggetto MappaItem e impostare le proprietà
+                                Mappa item = new Mappa();
+                                item.setBeaconUUID(mappaObject.getString("beaconUUID"));
+                                item.setNord(mappaObject.getString("nord"));
+                                item.setSud(mappaObject.getString("sud"));
+                                item.setEst(mappaObject.getString("est"));
+                                item.setOvest(mappaObject.getString("ovest"));
+                                item.setPosizione(mappaObject.getInt("posizione"));
+
+                                // Aggiungere l'oggetto MappaItem alla lista
+                                mappaItems1.add(item);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        // Gestisci il caso in cui la chiamata di rete ha restituito un errore
+                        Log.e("API_ERROR", "Errore nella chiamata API");
+                    }
+                    return responseString;
                 } else {
                     // La richiesta ha restituito un errore
                     return null;
@@ -379,56 +428,27 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                 e.printStackTrace();
                 return null;
             }
+
+
         }
-
-        @Override
-        protected void onPostExecute(String responseString) {
-            if (responseString != null) {
-                try {
-                    JSONObject jsonResponse = new JSONObject(responseString);
-                    gradiPartenza1 = jsonResponse.getInt("gradiPartenza");
-                    JSONArray mappaArray = jsonResponse.getJSONArray("mappa");
-                    for (int i = 0; i < mappaArray.length(); i++) {
-                        JSONObject mappaObject = mappaArray.getJSONObject(i);
-
-                        // Creare un oggetto MappaItem e impostare le proprietà
-                        Mappa item = new Mappa();
-                        item.setBeaconUUID(mappaObject.getString("beaconUUID"));
-                        item.setNord(mappaObject.getString("nord"));
-                        item.setSud(mappaObject.getString("sud"));
-                        item.setEst(mappaObject.getString("est"));
-                        item.setOvest(mappaObject.getString("ovest"));
-                        item.setPosizione(mappaObject.getInt("posizione"));
-
-                        // Aggiungere l'oggetto MappaItem alla lista
-                        mappaItems1.add(item);
-                    }
-                    indicazioni1(1, mappaItems1);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                // Gestisci il caso in cui la chiamata di rete ha restituito un errore
-                Log.e("API_ERROR", "Errore nella chiamata API");
-            }
-        }
-
-
     }
     public void controlli(){
         handler = new Handler(Looper.getMainLooper());
         runnable = new Runnable() {
             @Override
             public void run() {
+                indicazioni(nearestBeaconUuid, mappaItems);
                     if(nuovoNearestBeaconUuid != null && !nuovoNearestBeaconUuid.equals(nearestBeaconUuid)) {
                         nearestBeaconUuid = nuovoNearestBeaconUuid;
                         presente = false;
+                        synchronized (mappaItemsLock) {
                         for (Mappa mappa : mappaItems) {
                             if (mappa.getBeaconUUID().equals(nearestBeaconUuid)) {
                                 presente = true;
                                 indicazioni(nearestBeaconUuid, mappaItems);
                                 break;
                             }
+                        }
                         if (!presente) {
                             JSONObject jsonObject = new JSONObject();
                             try {
@@ -438,6 +458,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                             } catch (JSONException e) {
                                 e.printStackTrace();
                             }
+                            mappaItems.clear();
                             new PercorsoActivity.FetchDataTask().execute(jsonObject.toString());
                         }
                     }
@@ -455,30 +476,29 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
         runnable = new Runnable() {
             @Override
             public void run() {
-                // Esegui l'azione desiderata ogni secondo
-                if (!isScanning) {
-                    // Avvia la scansione dei beacon solo se non è in pausa
-                    startBeaconScanning();
-                    if(!nuovoNearestBeaconUuid.equals(nearestBeaconUuid)){
-                        for(Mappa mappa : mappaItems){
-                            if(mappa.getBeaconUUID().equals(nuovoNearestBeaconUuid)){
-                                presente1=true;
-                                posizioneRicomincia1 = mappa.getPosizione() - 1;
-                                indicazioni1(posizioneRicomincia1, mappaItems);
-                                return;
+                indicazioni1(nearestBeaconUuid, mappaItems1);
+                if(nuovoNearestBeaconUuid != null && !nuovoNearestBeaconUuid.equals(nearestBeaconUuid)) {
+                    nearestBeaconUuid = nuovoNearestBeaconUuid;
+                    presente = false;
+                    synchronized (mappaItemsLock) {
+                        for (Mappa mappa : mappaItems1) {
+                            if (mappa.getBeaconUUID().equals(nearestBeaconUuid)) {
+                                presente = true;
+                                indicazioni1(nearestBeaconUuid, mappaItems1);
+                                break;
                             }
-                            else{
-                                JSONObject jsonObject1 = new JSONObject();
-                                try {
-                                    jsonObject1.put("uuidPartenza", nuovoNearestBeaconUuid);
-                                    jsonObject1.put("repartoArrivo", reparto);
-                                    jsonObject1.put("stanzaArrivo", stanza);
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
-                                new PercorsoActivity.FetchDataTask1().execute(jsonObject1.toString());
+                        }
+                        if (!presente) {
+                            JSONObject jsonObject = new JSONObject();
+                            try {
+                                jsonObject.put("uuidPartenza", nuovoNearestBeaconUuid);
+                                jsonObject.put("repartoArrivo", reparto);
+                                jsonObject.put("stanzaArrivo", stanza);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
                             }
-
+                            mappaItems1.clear();
+                            new PercorsoActivity.FetchDataTask1().execute(jsonObject.toString());
                         }
                     }
                 }
@@ -506,7 +526,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             if(mappaArray.get(i).getBeaconUUID().equals(beaconUuid)) {
                 float gradi = azimuth - gradiPartenza;
                 if (gradi < 0)
-                    gradi = 360 - gradi;
+                    gradi = 360 + gradi;
                 if ((gradi >= 0 && gradi < 45) || (gradi >= 315 && gradi <= 360))
                     direzione = "nord";
                 else if (gradi >= 45 && gradi < 135)
@@ -526,7 +546,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getNord().equals("SINISTRA")) {
                         sinistra = true;
@@ -536,8 +559,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getNord().equals("DRITTO")) {
                         dritto = true;
@@ -547,8 +573,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getNord().equals("DIETRO")) {
                         indietro = true;
@@ -558,8 +587,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getNord().equals("DRITTO_DESTRA")) {
                         drittodestra = true;
@@ -569,8 +601,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getNord().equals("DRITTO_SINISTRA")) {
                         drittosinistra = true;
@@ -580,8 +615,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         sinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getNord().equals("SALI_SCALE")) {
                         saliscale = true;
@@ -591,8 +629,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         dritto = false;
                         sinistra = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getNord().equals("SCENDI_SCALE")) {
                         scendiscale = true;
@@ -602,11 +643,15 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         indietro = false;
                         dritto = false;
                         sinistra = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
-                    } else if (mappaArray.get(i).getNord().equals("SCALE_DISABILI")) {
-                        scaleaccessiili = true;
+                    } else if (mappaArray.get(i).getNord().equals("ARRIVATO")) {
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         scendiscale = false;
                         saliscale = false;
                         drittosinistra = false;
@@ -615,6 +660,8 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         dritto = false;
                         sinistra = false;
                         destra = false;
+                        arrivato = true;
+                        progress = false;
                         updateViewsVisibility();
                     }
                 }
@@ -628,7 +675,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getSud().equals("SINISTRA")) {
                         sinistra = true;
@@ -638,8 +688,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getSud().equals("DRITTO")) {
                         dritto = true;
@@ -649,8 +702,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getSud().equals("DIETRO")) {
                         indietro = true;
@@ -660,8 +716,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getSud().equals("DRITTO_DESTRA")) {
                         drittodestra = true;
@@ -671,8 +730,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getSud().equals("DRITTO_SINISTRA")) {
                         drittosinistra = true;
@@ -682,8 +744,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         sinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getSud().equals("SALI_SCALE")) {
                         saliscale = true;
@@ -693,8 +758,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         dritto = false;
                         sinistra = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getSud().equals("SCENDI_SCALE")) {
                         scendiscale = true;
@@ -704,11 +772,15 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         indietro = false;
                         dritto = false;
                         sinistra = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
-                    } else if (mappaArray.get(i).getSud().equals("SCALE_DISABILI")) {
-                        scaleaccessiili = true;
+                    } else if (mappaArray.get(i).getSud().equals("ARRIVATO")) {
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         scendiscale = false;
                         saliscale = false;
                         drittosinistra = false;
@@ -717,6 +789,8 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         dritto = false;
                         sinistra = false;
                         destra = false;
+                        arrivato = true;
+                        progress = false;
                         updateViewsVisibility();
                     }
                 }
@@ -730,7 +804,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getEst().equals("SINISTRA")) {
                         sinistra = true;
@@ -740,8 +817,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getEst().equals("DRITTO")) {
                         dritto = true;
@@ -751,8 +831,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getEst().equals("DIETRO")) {
                         indietro = true;
@@ -762,8 +845,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getEst().equals("DRITTO_DESTRA")) {
                         drittodestra = true;
@@ -773,8 +859,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getEst().equals("DRITTO_SINISTRA")) {
                         drittosinistra = true;
@@ -784,8 +873,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         sinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getEst().equals("SALI_SCALE")) {
                         saliscale = true;
@@ -795,8 +887,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         dritto = false;
                         sinistra = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getEst().equals("SCENDI_SCALE")) {
                         scendiscale = true;
@@ -806,11 +901,15 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         indietro = false;
                         dritto = false;
                         sinistra = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
-                    } else if (mappaArray.get(i).getEst().equals("SCALE_DISABILI")) {
-                        scaleaccessiili = true;
+                    } else if (mappaArray.get(i).getEst().equals("ARRIVATO")) {
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         scendiscale = false;
                         saliscale = false;
                         drittosinistra = false;
@@ -819,6 +918,8 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         dritto = false;
                         sinistra = false;
                         destra = false;
+                        arrivato = true;
+                        progress = false;
                         updateViewsVisibility();
                     }
                 }
@@ -832,7 +933,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getOvest().equals("SINISTRA")) {
                         sinistra = true;
@@ -842,8 +946,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getOvest().equals("DRITTO")) {
                         dritto = true;
@@ -853,8 +960,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getOvest().equals("DIETRO")) {
                         indietro = true;
@@ -864,8 +974,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getOvest().equals("DRITTO_DESTRA")) {
                         drittodestra = true;
@@ -875,8 +988,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         drittosinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getOvest().equals("DRITTO_SINISTRA")) {
                         drittosinistra = true;
@@ -886,8 +1002,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         sinistra = false;
                         saliscale = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getOvest().equals("SALI_SCALE")) {
                         saliscale = true;
@@ -897,8 +1016,11 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         dritto = false;
                         sinistra = false;
                         scendiscale = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
                     } else if (mappaArray.get(i).getOvest().equals("SCENDI_SCALE")) {
                         scendiscale = true;
@@ -908,11 +1030,16 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         indietro = false;
                         dritto = false;
                         sinistra = false;
-                        scaleaccessiili = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         destra = false;
+                        arrivato = false;
+                        progress = false;
                         updateViewsVisibility();
-                    } else if (mappaArray.get(i).getOvest().equals("SCALE_DISABILI")) {
-                        scaleaccessiili = true;
+                    } else if (mappaArray.get(i).getOvest().equals("ARRIVATO")) {
+                        arrivato = true;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
                         scendiscale = false;
                         saliscale = false;
                         drittosinistra = false;
@@ -921,6 +1048,7 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
                         dritto = false;
                         sinistra = false;
                         destra = false;
+                        progress = false;
                         updateViewsVisibility();
                     }
                 }
@@ -929,428 +1057,540 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
         }
 
     }
-    private void indicazioni1(int posizione, List<Mappa> mappaArray){
-        String direzione = "";
-        for (int i=posizione; i < mappaArray.size(); i++ ){
-            float gradi = azimuth - gradiPartenza1;
-            if(gradi < 0)
-                gradi = 360 - gradi;
-            if((gradi >= 0 && gradi < 45) || (gradi >= 315 && gradi <= 360))
-                direzione = "nord";
-            else if(gradi >= 45 && gradi < 135)
-                direzione = "est";
-            else if (gradi >= 135 && gradi < 225)
-                direzione="sud";
-            else
-                direzione="ovest";
+    private void indicazioni1(String beaconUuid, List<Mappa> mappaArray){
+        String direzione="";
+        for(int i=0; i < mappaArray.size(); i++) {
 
-            if(direzione.equals("nord")){
-                if(mappaArray.get(i).getNord().equals("DESTRA")){
-                    destra = true;
-                    sinistra = false;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    updateViewsVisibility();
-                } else if(mappaArray.get(i).getNord().equals("SINISTRA")){
-                    sinistra = true;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("DRITTO")){
-                    dritto = true;
-                    sinistra = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("DIETRO")){
-                    indietro = true;
-                    dritto = false;
-                    sinistra = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("DRITTO_DESTRA")){
-                    drittodestra = true;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("DRITTO_SINISTRA")){
-                    drittosinistra = true;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("SALI_SCALE")){
-                    saliscale = true;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("SCENDI_SCALE")){
-                    scendiscale = true;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getNord().equals("SCALE_DISABILI")){
-                    scaleaccessiili = true;
-                    scendiscale = false;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    destra = false;
-                    updateViewsVisibility();
+            if(mappaArray.get(i).getBeaconUUID().equals(beaconUuid)) {
+                float gradi = azimuth - gradiPartenza;
+                if (gradi < 0)
+                    gradi = 360 + gradi;
+                if ((gradi >= 0 && gradi < 45) || (gradi >= 315 && gradi <= 360))
+                    direzione = "nord";
+                else if (gradi >= 45 && gradi < 135)
+                    direzione = "est";
+                else if (gradi >= 135 && gradi < 225)
+                    direzione = "sud";
+                else
+                    direzione = "ovest";
+
+                if (direzione.equals("nord")) {
+                    if (mappaArray.get(i).getNord().equals("DESTRA")) {
+                        destra = true;
+                        sinistra = false;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("SINISTRA")) {
+                        sinistra = true;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("DRITTO")) {
+                        dritto = true;
+                        sinistra = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("DIETRO")) {
+                        indietro = true;
+                        dritto = false;
+                        sinistra = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("DRITTO_DESTRA")) {
+                        drittodestra = true;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("DRITTO_SINISTRA")) {
+                        drittosinistra = true;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("SALI_SCALE")) {
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = true;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("SCENDI_SCALE")) {
+                        scendiscale = false;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = true;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getNord().equals("ARRIVATO")) {
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        scendiscale = false;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        destra = false;
+                        arrivato = true;
+                        progress = false;
+                        updateViewsVisibility();
+                    }
                 }
-            }
-            if(direzione.equals("sud")){
-                if(mappaArray.get(i).getSud().equals("DESTRA")){
-                    destra = true;
-                    sinistra = false;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    updateViewsVisibility();
-                } else if(mappaArray.get(i).getSud().equals("SINISTRA")){
-                    sinistra = true;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("DRITTO")){
-                    dritto = true;
-                    sinistra = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("DIETRO")){
-                    indietro = true;
-                    dritto = false;
-                    sinistra = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("DRITTO_DESTRA")){
-                    drittodestra = true;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("DRITTO_SINISTRA")){
-                    drittosinistra = true;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("SALI_SCALE")){
-                    saliscale = true;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("SCENDI_SCALE")){
-                    scendiscale = true;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getSud().equals("SCALE_DISABILI")){
-                    scaleaccessiili = true;
-                    scendiscale = false;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    destra = false;
-                    updateViewsVisibility();
+                if (direzione.equals("sud")) {
+                    if (mappaArray.get(i).getSud().equals("DESTRA")) {
+                        destra = true;
+                        sinistra = false;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("SINISTRA")) {
+                        sinistra = true;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("DRITTO")) {
+                        dritto = true;
+                        sinistra = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("DIETRO")) {
+                        indietro = true;
+                        dritto = false;
+                        sinistra = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("DRITTO_DESTRA")) {
+                        drittodestra = true;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("DRITTO_SINISTRA")) {
+                        drittosinistra = true;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("SALI_SCALE")) {
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = true;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("SCENDI_SCALE")) {
+                        scendiscale = false;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scendiscaleaccessiili = true;
+                        saliscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getSud().equals("ARRIVATO")) {
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        scendiscale = false;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        destra = false;
+                        arrivato = true;
+                        progress = false;
+                        updateViewsVisibility();
+                    }
                 }
-            }
-            if(direzione.equals("est")){
-                if(mappaArray.get(i).getEst().equals("DESTRA")){
-                    destra = true;
-                    sinistra = false;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    updateViewsVisibility();
-                } else if(mappaArray.get(i).getEst().equals("SINISTRA")){
-                    sinistra = true;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("DRITTO")){
-                    dritto = true;
-                    sinistra = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("DIETRO")){
-                    indietro = true;
-                    dritto = false;
-                    sinistra = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("DRITTO_DESTRA")){
-                    drittodestra = true;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("DRITTO_SINISTRA")){
-                    drittosinistra = true;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("SALI_SCALE")){
-                    saliscale = true;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("SCENDI_SCALE")){
-                    scendiscale = true;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getEst().equals("SCALE_DISABILI")){
-                    scaleaccessiili = true;
-                    scendiscale = false;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    destra = false;
-                    updateViewsVisibility();
+                if (direzione.equals("est")) {
+                    if (mappaArray.get(i).getEst().equals("DESTRA")) {
+                        destra = true;
+                        sinistra = false;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("SINISTRA")) {
+                        sinistra = true;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("DRITTO")) {
+                        dritto = true;
+                        sinistra = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("DIETRO")) {
+                        indietro = true;
+                        dritto = false;
+                        sinistra = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("DRITTO_DESTRA")) {
+                        drittodestra = true;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("DRITTO_SINISTRA")) {
+                        drittosinistra = true;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("SALI_SCALE")) {
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = true;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("SCENDI_SCALE")) {
+                        scendiscale = false;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = true;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getEst().equals("ARRIVATO")) {
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        scendiscale = false;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        destra = false;
+                        arrivato = true;
+                        progress = false;
+                        updateViewsVisibility();
+                    }
                 }
-            }
-            if(direzione.equals("ovest")){
-                if(mappaArray.get(i).getOvest().equals("DESTRA")){
-                    destra = true;
-                    sinistra = false;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    updateViewsVisibility();
-                } else if(mappaArray.get(i).getOvest().equals("SINISTRA")){
-                    sinistra = true;
-                    dritto = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("DRITTO")){
-                    dritto = true;
-                    sinistra = false;
-                    indietro = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("DIETRO")){
-                    indietro = true;
-                    dritto = false;
-                    sinistra = false;
-                    drittodestra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("DRITTO_DESTRA")){
-                    drittodestra = true;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    drittosinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("DRITTO_SINISTRA")){
-                    drittosinistra = true;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    saliscale = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("SALI_SCALE")){
-                    saliscale = true;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scendiscale = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("SCENDI_SCALE")){
-                    scendiscale = true;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    scaleaccessiili = false;
-                    destra = false;
-                    updateViewsVisibility();
-                }else if(mappaArray.get(i).getOvest().equals("SCALE_DISABILI")){
-                    scaleaccessiili = true;
-                    scendiscale = false;
-                    saliscale = false;
-                    drittosinistra = false;
-                    drittodestra = false;
-                    indietro = false;
-                    dritto = false;
-                    sinistra = false;
-                    destra = false;
-                    updateViewsVisibility();
+                if (direzione.equals("ovest")) {
+                    if (mappaArray.get(i).getOvest().equals("DESTRA")) {
+                        destra = true;
+                        sinistra = false;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("SINISTRA")) {
+                        sinistra = true;
+                        dritto = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("DRITTO")) {
+                        dritto = true;
+                        sinistra = false;
+                        indietro = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("DIETRO")) {
+                        indietro = true;
+                        dritto = false;
+                        sinistra = false;
+                        drittodestra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("DRITTO_DESTRA")) {
+                        drittodestra = true;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        drittosinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("DRITTO_SINISTRA")) {
+                        drittosinistra = true;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        saliscale = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("SALI_SCALE")) {
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        scendiscale = false;
+                        saliscaleaccessiili = true;
+                        scendiscaleaccessiili = false;
+                        destra = false;
+                        arrivato = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("SCENDI_SCALE")) {
+                        scendiscale = false;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = true;
+                        arrivato = false;
+                        destra = false;
+                        progress = false;
+                        updateViewsVisibility();
+                    } else if (mappaArray.get(i).getOvest().equals("ARRIVATO")) {
+                        saliscaleaccessiili = false;
+                        scendiscaleaccessiili = false;
+                        scendiscale = false;
+                        saliscale = false;
+                        drittosinistra = false;
+                        drittodestra = false;
+                        indietro = false;
+                        dritto = false;
+                        sinistra = false;
+                        destra = false;
+                        arrivato = true;
+                        progress = false;
+                        updateViewsVisibility();
+                    }
                 }
+                break;
             }
         }
 
@@ -1376,6 +1616,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             scendisaleText.setVisibility(View.GONE);
             scaleaccessibiliImage.setVisibility(View.GONE);
             scaleaccessibiliText.setVisibility(View.GONE);
+            progressImage.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            arrivatoImage.setVisibility(View.GONE);
+            arrivatoText.setVisibility(View.GONE);
         }else if(sinistra){
             destraImage.setVisibility(View.GONE);
             destraText.setVisibility(View.GONE);
@@ -1395,6 +1639,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             scendisaleText.setVisibility(View.GONE);
             scaleaccessibiliImage.setVisibility(View.GONE);
             scaleaccessibiliText.setVisibility(View.GONE);
+            progressImage.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            arrivatoImage.setVisibility(View.GONE);
+            arrivatoText.setVisibility(View.GONE);
         }else if(dritto){
             destraImage.setVisibility(View.GONE);
             destraText.setVisibility(View.GONE);
@@ -1414,6 +1662,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             scendisaleText.setVisibility(View.GONE);
             scaleaccessibiliImage.setVisibility(View.GONE);
             scaleaccessibiliText.setVisibility(View.GONE);
+            progressImage.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            arrivatoImage.setVisibility(View.GONE);
+            arrivatoText.setVisibility(View.GONE);
         }else if(indietro){
             destraImage.setVisibility(View.GONE);
             destraText.setVisibility(View.GONE);
@@ -1433,6 +1685,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             scendisaleText.setVisibility(View.GONE);
             scaleaccessibiliImage.setVisibility(View.GONE);
             scaleaccessibiliText.setVisibility(View.GONE);
+            progressImage.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            arrivatoImage.setVisibility(View.GONE);
+            arrivatoText.setVisibility(View.GONE);
         }else if(drittodestra){
             destraImage.setVisibility(View.GONE);
             destraText.setVisibility(View.GONE);
@@ -1452,6 +1708,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             scendisaleText.setVisibility(View.GONE);
             scaleaccessibiliImage.setVisibility(View.GONE);
             scaleaccessibiliText.setVisibility(View.GONE);
+            progressImage.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            arrivatoImage.setVisibility(View.GONE);
+            arrivatoText.setVisibility(View.GONE);
         }else if(drittosinistra){
             destraImage.setVisibility(View.GONE);
             destraText.setVisibility(View.GONE);
@@ -1471,6 +1731,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             scendisaleText.setVisibility(View.GONE);
             scaleaccessibiliImage.setVisibility(View.GONE);
             scaleaccessibiliText.setVisibility(View.GONE);
+            progressImage.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            arrivatoImage.setVisibility(View.GONE);
+            arrivatoText.setVisibility(View.GONE);
         }else if(saliscale){
             destraImage.setVisibility(View.GONE);
             destraText.setVisibility(View.GONE);
@@ -1490,6 +1754,10 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             scendisaleText.setVisibility(View.GONE);
             scaleaccessibiliImage.setVisibility(View.GONE);
             scaleaccessibiliText.setVisibility(View.GONE);
+            progressImage.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            arrivatoImage.setVisibility(View.GONE);
+            arrivatoText.setVisibility(View.GONE);
         }else if(scendiscale){
             destraImage.setVisibility(View.GONE);
             destraText.setVisibility(View.GONE);
@@ -1509,7 +1777,34 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             scendisaleText.setVisibility(View.VISIBLE);
             scaleaccessibiliImage.setVisibility(View.GONE);
             scaleaccessibiliText.setVisibility(View.GONE);
-        }else if(scaleaccessiili){
+            progressImage.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            arrivatoImage.setVisibility(View.GONE);
+            arrivatoText.setVisibility(View.GONE);
+        }else if(saliscaleaccessiili){
+            destraImage.setVisibility(View.GONE);
+            destraText.setVisibility(View.GONE);
+            sinistraImage.setVisibility(View.GONE);
+            sinistraText.setVisibility(View.GONE);
+            drittoImage.setVisibility(View.GONE);
+            drittoText.setVisibility(View.GONE);
+            indietroImage.setVisibility(View.GONE);
+            indietroText.setVisibility(View.GONE);
+            drittodestraImage.setVisibility(View.GONE);
+            drittodestraText.setVisibility(View.GONE);
+            drittosinistrsImage.setVisibility(View.GONE);
+            drittosinistraText.setVisibility(View.GONE);
+            saliscaleImage.setVisibility(View.GONE);
+            saliscaleText.setVisibility(View.VISIBLE);
+            scendiscaleImage.setVisibility(View.GONE);
+            scendisaleText.setVisibility(View.GONE);
+            scaleaccessibiliImage.setVisibility(View.VISIBLE);
+            scaleaccessibiliText.setVisibility(View.GONE);
+            progressImage.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            arrivatoImage.setVisibility(View.GONE);
+            arrivatoText.setVisibility(View.GONE);
+        }else if(scendiscaleaccessiili){
             destraImage.setVisibility(View.GONE);
             destraText.setVisibility(View.GONE);
             sinistraImage.setVisibility(View.GONE);
@@ -1525,9 +1820,13 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             saliscaleImage.setVisibility(View.GONE);
             saliscaleText.setVisibility(View.GONE);
             scendiscaleImage.setVisibility(View.GONE);
-            scendisaleText.setVisibility(View.GONE);
+            scendisaleText.setVisibility(View.VISIBLE);
             scaleaccessibiliImage.setVisibility(View.VISIBLE);
-            scaleaccessibiliText.setVisibility(View.VISIBLE);
+            scaleaccessibiliText.setVisibility(View.GONE);
+            progressImage.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            arrivatoImage.setVisibility(View.GONE);
+            arrivatoText.setVisibility(View.GONE);
         }else if(none){
             destraImage.setVisibility(View.GONE);
             destraText.setVisibility(View.GONE);
@@ -1547,6 +1846,57 @@ public class PercorsoActivity extends AppCompatActivity  implements SensorEventL
             scendisaleText.setVisibility(View.GONE);
             scaleaccessibiliImage.setVisibility(View.GONE);
             scaleaccessibiliText.setVisibility(View.GONE);
+            progressImage.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            arrivatoImage.setVisibility(View.GONE);
+            arrivatoText.setVisibility(View.GONE);
+        }else if(progress){
+            destraImage.setVisibility(View.GONE);
+            destraText.setVisibility(View.GONE);
+            sinistraImage.setVisibility(View.GONE);
+            sinistraText.setVisibility(View.GONE);
+            drittoImage.setVisibility(View.GONE);
+            drittoText.setVisibility(View.GONE);
+            indietroImage.setVisibility(View.GONE);
+            indietroText.setVisibility(View.GONE);
+            drittodestraImage.setVisibility(View.GONE);
+            drittodestraText.setVisibility(View.GONE);
+            drittosinistrsImage.setVisibility(View.GONE);
+            drittosinistraText.setVisibility(View.GONE);
+            saliscaleImage.setVisibility(View.GONE);
+            saliscaleText.setVisibility(View.GONE);
+            scendiscaleImage.setVisibility(View.GONE);
+            scendisaleText.setVisibility(View.GONE);
+            scaleaccessibiliImage.setVisibility(View.GONE);
+            scaleaccessibiliText.setVisibility(View.GONE);
+            progressImage.setVisibility(View.VISIBLE);
+            progressText.setVisibility(View.VISIBLE);
+            arrivatoImage.setVisibility(View.GONE);
+            arrivatoText.setVisibility(View.GONE);
+        }
+        else if(arrivato){
+            destraImage.setVisibility(View.GONE);
+            destraText.setVisibility(View.GONE);
+            sinistraImage.setVisibility(View.GONE);
+            sinistraText.setVisibility(View.GONE);
+            drittoImage.setVisibility(View.GONE);
+            drittoText.setVisibility(View.GONE);
+            indietroImage.setVisibility(View.GONE);
+            indietroText.setVisibility(View.GONE);
+            drittodestraImage.setVisibility(View.GONE);
+            drittodestraText.setVisibility(View.GONE);
+            drittosinistrsImage.setVisibility(View.GONE);
+            drittosinistraText.setVisibility(View.GONE);
+            saliscaleImage.setVisibility(View.GONE);
+            saliscaleText.setVisibility(View.GONE);
+            scendiscaleImage.setVisibility(View.GONE);
+            scendisaleText.setVisibility(View.GONE);
+            scaleaccessibiliImage.setVisibility(View.GONE);
+            scaleaccessibiliText.setVisibility(View.GONE);
+            progressImage.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            arrivatoImage.setVisibility(View.VISIBLE);
+            arrivatoText.setVisibility(View.VISIBLE);
         }
 
     }
